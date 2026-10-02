@@ -1,5 +1,23 @@
 # HET PODIUM // DJ LAB
 
+## DJ LAB 0.3.0 PRO
+
+Professional workflow prototype inspired by common interaction patterns in modern DJ software such as stacked waveforms, multi-mode performance pads, Prepare/History workflows and provider-aware music sources. The visual design is original to Ordinis Software and does not copy a vendor interface pixel-for-pixel.
+
+### New in 0.3.0
+- Stacked scrolling Deck A/B waveforms with beat-line overlays when BPM is known
+- 8 performance pads per deck
+- Pad modes: Hot Cue, Beat Loop, Beat Jump and Pad FX
+- 8 Hot Cues (A-H) per deck
+- Quantize toggle per deck
+- Beat Jump -32/-16/-8/-4/+4/+8/+16/+32
+- Beat Loop 1/2, 1, 2, 4, 8, 16, 32 and 64 beats
+- Hold-style Pad FX including Echo, Reverb, LP/HP filter, EQ cuts and Wash
+- Library tabs: Collection, Prepare and History
+- Music-source architecture UI for Local, Spotify, Apple Music, Beatport, SoundCloud and TIDAL
+- Spotify direct mixing remains disabled until official provider/partner access is available
+
+
 Browser-based DJ console developed by **Ordinis Software** for the HET PODIUM concept.
 
 ## DJ LAB 0.2.0
