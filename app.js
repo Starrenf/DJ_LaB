@@ -893,21 +893,51 @@ async function addFiles(list){
   }
 }
 
+function recordHistory(track,deck){
+  historyEntries.unshift({track,deck,at:new Date()});
+  if(historyEntries.length>100)historyEntries.length=100;
+}
+
+function togglePrepare(track){
+  if(prepareTrackIds.has(track.id))prepareTrackIds.delete(track.id);
+  else prepareTrackIds.add(track.id);
+  $("prepareCount").textContent=prepareTrackIds.size;
+  renderLibrary();
+}
+
+function setLibraryView(view){
+  libraryView=view;
+  document.querySelectorAll("[data-library-view]").forEach(b=>b.classList.toggle("active",b.dataset.libraryView===view));
+  renderLibrary();
+}
+
 function renderLibrary(){
   const rows=$("trackRows"),q=$("searchTracks").value.toLowerCase();
   rows.innerHTML="";
 
   let arr=[...tracks.values()];
-  if(selectedPlaylist!=="all"){
+
+  if(libraryView==="prepare"){
+    arr=arr.filter(t=>prepareTrackIds.has(t.id));
+  }else if(libraryView==="history"){
+    arr=historyEntries.map(x=>x.track);
+  }else if(selectedPlaylist!=="all"){
     const ids=playlists.get(selectedPlaylist)||[];
     arr=arr.filter(t=>ids.includes(t.id));
   }
 
   arr=arr.filter(t=>t.title.toLowerCase().includes(q));
   $("allCount").textContent=tracks.size;
-  $("libraryTitle").textContent=selectedPlaylist==="all"?"Alle tracks":selectedPlaylist;
+  $("prepareCount").textContent=prepareTrackIds.size;
 
-  if(!arr.length)rows.innerHTML='<div class="empty-library">Nog geen tracks. Voeg lokale audio toe.</div>';
+  if(libraryView==="prepare")$("libraryTitle").textContent="Prepare";
+  else if(libraryView==="history")$("libraryTitle").textContent="History";
+  else $("libraryTitle").textContent=selectedPlaylist==="all"?"Alle tracks":selectedPlaylist;
+
+  if(!arr.length){
+    const empty=libraryView==="prepare"?"Nog geen tracks in Prepare.":libraryView==="history"?"Nog geen afgespeelde of geladen tracks.":"Nog geen tracks. Voeg lokale audio toe.";
+    rows.innerHTML='<div class="empty-library">'+empty+'</div>';
+  }
 
   arr.forEach((t,i)=>{
     const r=document.createElement("div");
@@ -919,13 +949,14 @@ function renderLibrary(){
       '<span class="track-bpm">'+(t.bpm?t.bpm.toFixed(1):'<button>ANALYZE</button>')+'</span>'+
       '<span>--:--</span>'+
       '<span><select class="playlist-select"><option value="">+ playlist</option>'+[...playlists.keys()].map(n=>'<option>'+esc(n)+'</option>').join("")+'</select></span>'+
-      '<span class="row-load"><button>A</button><button>B</button></span>';
+      '<span class="row-load"><button class="prepare">'+(prepareTrackIds.has(t.id)?"✓ PREP":"＋ PREP")+'</button><button>A</button><button>B</button></span>';
 
     r.addEventListener("dragstart",e=>e.dataTransfer.setData("text/hp-track",t.id));
 
     const btns=r.querySelectorAll(".row-load button");
-    btns[0].onclick=()=>deckA.load(t);
-    btns[1].onclick=()=>deckB.load(t);
+    btns[0].onclick=()=>togglePrepare(t);
+    btns[1].onclick=()=>deckA.load(t);
+    btns[2].onclick=()=>deckB.load(t);
 
     const an=r.querySelector(".track-bpm button");
     if(an)an.onclick=()=>analyze(t);
@@ -959,7 +990,7 @@ function renderPlaylists(){
     const b=document.createElement("button");
     b.className="playlist"+(selectedPlaylist===n?" active":"");
     b.innerHTML="♪ "+esc(n)+" <span>"+a.length+"</span>";
-    b.onclick=()=>{selectedPlaylist=n;renderLibrary()};
+    b.onclick=()=>{selectedPlaylist=n;libraryView="collection";document.querySelectorAll("[data-library-view]").forEach(x=>x.classList.toggle("active",x.dataset.libraryView==="collection"));renderLibrary()};
     box.appendChild(b);
   }
 
@@ -1195,8 +1226,15 @@ $("addPlaylist").onclick=()=>{
 
 document.querySelector('[data-playlist="all"]').onclick=()=>{
   selectedPlaylist="all";
-  renderLibrary();
+  setLibraryView("collection");
 };
+
+document.querySelectorAll("[data-library-view]").forEach(b=>b.onclick=()=>setLibraryView(b.dataset.libraryView));
+
+document.querySelectorAll("[data-stream-source]").forEach(b=>b.onclick=()=>{
+  const names={spotify:"Spotify",apple:"Apple Music",beatport:"Beatport",soundcloud:"SoundCloud",tidal:"TIDAL"};
+  toast(names[b.dataset.streamSource]+" · provider-integratie is voorbereid maar vereist officiële toegang/licenties");
+});
 
 const drop=$("dropLibrary");
 ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{
