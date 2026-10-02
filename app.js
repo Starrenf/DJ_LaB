@@ -35,7 +35,10 @@ let micMuted=false;
 let talkoverEnabled=true;
 
 let selectedPlaylist="all";
+let libraryView="collection";
 let activeSampleBank="JINGLES";
+const prepareTrackIds=new Set();
+const historyEntries=[];
 const tracks=new Map();
 const playlists=new Map([["Warm-up",[]],["Main set",[]],["Closing",[]]]);
 const SAMPLE_BANK_NAMES=["JINGLES","VOCALS","FX","DRUMS"];
@@ -119,7 +122,9 @@ class Deck{
     this.loopBeats=0;
     this.nodes=null;
     this.peaks=[];
-    this.hotCues=[null,null,null,null];
+    this.hotCues=Array(8).fill(null);
+    this.padMode="hotcue";
+    this.quantize=true;
   }
 
   init(){
@@ -186,7 +191,7 @@ class Deck{
     this.rate=1;
     this.bpm=track.bpm||null;
     this.loopBeats=0;
-    this.hotCues=[null,null,null,null];
+    this.hotCues=Array(8).fill(null);
 
     $("title"+this.id).textContent=track.title;
     $("artist"+this.id).textContent="Local file";
@@ -197,6 +202,9 @@ class Deck{
     document.querySelector(".deck-"+this.id.toLowerCase()+" .wave-wrap").classList.add("has-track");
     this.makePeaks();
     this.renderHotCues();
+    $("overviewTitle"+this.id).textContent=track.title;
+    $("overviewBpm"+this.id).textContent=this.bpm?this.bpm.toFixed(1)+" BPM":"--.- BPM";
+    recordHistory(track,this.id);
     this.draw();
     this.update();
     toast(track.title+" geladen in Deck "+this.id);
@@ -346,7 +354,7 @@ class Deck{
     }
 
     if(this.hotCues[index]===null){
-      this.hotCues[index]=this.current();
+      this.hotCues[index]=this.quantizeTime(this.current());
       this.renderHotCues();
       this.draw();
       toast("Hot Cue "+String.fromCharCode(65+index)+" gezet");
@@ -363,12 +371,108 @@ class Deck{
     }
   }
 
+  quantizeTime(t){
+    if(!this.quantize||!this.bpm)return t;
+    const beat=60/this.bpm;
+    return clamp(Math.round(t/beat)*beat,0,this.buffer?this.buffer.duration:t);
+  }
+
+  beatJump(beats){
+    if(!this.buffer)return toast("Laad eerst een track");
+    if(!this.bpm)return toast("Analyseer eerst BPM voor Beat Jump");
+    const target=this.quantizeTime(this.current()+beats*(60/this.bpm));
+    this.seek(target);
+  }
+
+  setPadMode(mode){
+    this.padMode=mode;
+    document.querySelectorAll('[data-pad-mode][data-deck="'+this.id+'"]').forEach(b=>b.classList.toggle("active",b.dataset.padMode===mode));
+    this.renderPerformancePads();
+  }
+
+  toggleQuantize(){
+    this.quantize=!this.quantize;
+    const b=document.querySelector('[data-action="quantize"][data-deck="'+this.id+'"]');
+    if(b)b.classList.toggle("active",this.quantize);
+    toast("Quantize "+(this.quantize?"ON":"OFF")+" · Deck "+this.id);
+  }
+
+  applyPadFx(index,on){
+    if(!this.buffer)return;
+    ensureAudio();
+    const n=this.nodes;
+    if(!n)return;
+
+    if(!on){
+      updateChannel(this.id);
+      updateFx(this.id);
+      return;
+    }
+
+    switch(index){
+      case 0:
+        n.delay.delayTime.value=this.bpm?Math.min(.75,(60/this.bpm)/2):.28;
+        n.delayWet.gain.value=.68;n.feedback.gain.value=.42;break;
+      case 1:
+        n.revWet.gain.value=.78;break;
+      case 2:
+        n.filter.type="lowpass";n.filter.frequency.value=900;break;
+      case 3:
+        n.filter.type="highpass";n.filter.frequency.value=700;break;
+      case 4:
+        n.low.gain.value=-18;break;
+      case 5:
+        n.mid.gain.value=-18;break;
+      case 6:
+        n.high.gain.value=-18;break;
+      case 7:
+        n.delayWet.gain.value=.4;n.feedback.gain.value=.34;n.revWet.gain.value=.65;
+        n.filter.type="lowpass";n.filter.frequency.value=2600;break;
+    }
+  }
+
   renderHotCues(){
-    document.querySelectorAll('[data-hotcue][data-deck="'+this.id+'"]').forEach(btn=>{
-      const i=Number(btn.dataset.hotcue);
-      btn.classList.toggle("set",this.hotCues[i]!==null);
-      btn.title=this.hotCues[i]===null?"Klik om Hot Cue te zetten":"Hot Cue "+fmt(this.hotCues[i])+" · Shift+klik wist";
-    });
+    this.renderPerformancePads();
+  }
+
+  renderPerformancePads(){
+    const box=$("performancePads"+this.id);
+    if(!box)return;
+    box.innerHTML="";
+
+    const loopValues=[.5,1,2,4,8,16,32,64];
+    const jumpValues=[-32,-16,-8,-4,4,8,16,32];
+    const fxLabels=["ECHO 1/2","REVERB","LP FILTER","HP FILTER","BASS CUT","MID CUT","HIGH CUT","WASH"];
+
+    for(let i=0;i<8;i++){
+      const b=document.createElement("button");
+      b.className="performance-pad";
+
+      if(this.padMode==="hotcue"){
+        const name=String.fromCharCode(65+i);
+        const set=this.hotCues[i]!==null;
+        b.classList.toggle("set",set);
+        b.innerHTML=name+(set?"<small>"+fmt(this.hotCues[i])+"</small>":"<small>SET CUE</small>");
+        b.title=set?"Hot Cue "+name+" · Shift+klik wist":"Klik om Hot Cue "+name+" te zetten";
+        b.onclick=e=>this.hotCue(i,e.shiftKey);
+      }else if(this.padMode==="loop"){
+        const v=loopValues[i];
+        b.classList.toggle("active",this.loopBeats===v);
+        b.innerHTML=(v<1?"1/2":v)+"<small>BEAT LOOP</small>";
+        b.onclick=()=>{this.toggleLoop(v);this.renderPerformancePads()};
+      }else if(this.padMode==="jump"){
+        const v=jumpValues[i];
+        b.innerHTML=(v>0?"+":"")+v+"<small>BEATS</small>";
+        b.onclick=()=>this.beatJump(v);
+      }else{
+        b.innerHTML=fxLabels[i]+"<small>HOLD FX</small>";
+        const off=()=>{b.classList.remove("active");this.applyPadFx(i,false)};
+        b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture?.(e.pointerId);b.classList.add("active");this.applyPadFx(i,true)};
+        ["pointerup","pointercancel","lostpointercapture"].forEach(ev=>b.addEventListener(ev,off));
+      }
+
+      box.appendChild(b);
+    }
   }
 
   setRate(r){
@@ -392,7 +496,7 @@ class Deck{
     this.loopBeats=this.loopBeats===n?0:n;
     document.querySelectorAll('[data-loop][data-deck="'+this.id+'"]').forEach(b=>b.classList.toggle("active",Number(b.dataset.loop)===this.loopBeats));
     if(this.playing){
-      const t=this.current();
+      const t=this.quantizeTime(this.current());
       this.pause(false);
       this.offset=t;
       this.startFromOffset();
@@ -441,6 +545,50 @@ class Deck{
         g.fillRect(x-1,0,2,18);
       });
     }
+
+    this.drawOverview();
+  }
+
+  drawOverview(){
+    const c=$("overview"+this.id);
+    if(!c)return;
+    const g=c.getContext("2d"),w=c.width,h=c.height;
+    g.clearRect(0,0,w,h);
+    g.fillStyle="#05070a";
+    g.fillRect(0,0,w,h);
+    if(!this.peaks.length||!this.buffer)return;
+
+    const accent=this.id==="A"?"#22e6ff":"#ff3bbd";
+    const center=(this.current()/this.buffer.duration)*(this.peaks.length-1);
+    const visible=96;
+    const start=center-visible/2;
+    const bw=w/visible;
+
+    for(let i=0;i<visible;i++){
+      const idx=Math.floor(start+i);
+      const peak=(idx>=0&&idx<this.peaks.length)?this.peaks[idx]:0;
+      const ph=Math.max(1,peak*h*.82);
+      g.globalAlpha=.35+peak*.65;
+      g.fillStyle=accent;
+      g.fillRect(i*bw,(h-ph)/2,Math.max(1,bw-1),ph);
+    }
+    g.globalAlpha=1;
+
+    if(this.bpm){
+      const beatSec=60/this.bpm;
+      const visibleSec=(visible/this.peaks.length)*this.buffer.duration;
+      const pxPerSec=w/visibleSec;
+      const now=this.current();
+      const nearest=Math.round(now/beatSec)*beatSec;
+      for(let n=-24;n<=24;n++){
+        const bt=nearest+n*beatSec;
+        const x=w/2+(bt-now)*pxPerSec;
+        if(x<0||x>w)continue;
+        const bar=Math.round(bt/beatSec)%4===0;
+        g.fillStyle=bar?"rgba(255,255,255,.28)":"rgba(255,255,255,.10)";
+        g.fillRect(x,0,bar?2:1,h);
+      }
+    }
   }
 
   update(){
@@ -454,6 +602,7 @@ class Deck{
     p.textContent=this.playing?"Ⅱ PAUSE":"▶ PLAY";
 
     $("jog"+this.id).classList.toggle("playing",this.playing);
+    $("overviewBpm"+this.id).textContent=this.bpm?(this.bpm*this.rate).toFixed(1)+" BPM":"--.- BPM";
     if(this.buffer)this.draw();
   }
 }
@@ -946,7 +1095,9 @@ function bindDeck(d,other){
 
   document.querySelector('[data-action="sync"][data-deck="'+id+'"]').onclick=()=>d.sync(other);
   document.querySelectorAll('[data-loop][data-deck="'+id+'"]').forEach(b=>b.onclick=()=>d.toggleLoop(Number(b.dataset.loop)));
-  document.querySelectorAll('[data-hotcue][data-deck="'+id+'"]').forEach(b=>b.onclick=e=>d.hotCue(Number(b.dataset.hotcue),e.shiftKey));
+  document.querySelectorAll('[data-pad-mode][data-deck="'+id+'"]').forEach(b=>b.onclick=()=>d.setPadMode(b.dataset.padMode));
+  document.querySelector('[data-action="quantize"][data-deck="'+id+'"]').onclick=()=>d.toggleQuantize();
+  d.renderPerformancePads();
 
   $("pitch"+id).oninput=e=>d.setRate(1+Number(e.target.value)/100);
   $("bpm"+id).onchange=e=>{
