@@ -9,14 +9,17 @@
 </head>
 <body data-theme="neon">
   <div class="noise"></div>
+
   <header class="topbar glass">
     <div class="brand">
       <div class="brand-mark">HP</div>
       <div>
         <div class="eyebrow">HET PODIUM</div>
-        <h1>DJ LAB <span class="beta">ALPHA 0.1.4</span></h1>
+        <h1>DJ LAB <span class="beta">0.2.0</span></h1>
+        <div class="software-credit">by <strong>Ordinis Software</strong></div>
       </div>
     </div>
+
     <div class="top-actions">
       <div class="master-bpm"><span>MASTER</span><strong id="masterBpm">--.- BPM</strong></div>
       <button class="status-pill" id="audioStatus"><i></i> AUDIO STANDBY</button>
@@ -25,24 +28,64 @@
   </header>
 
   <main class="app-shell">
+
+    <section class="live-toolbar panel">
+      <div class="live-block">
+        <span class="eyebrow">MICROFOON</span>
+        <div class="live-inline">
+          <button id="micToggle" class="live-button">🎙 MIC START</button>
+          <button id="talkoverToggle" class="live-button active" aria-pressed="true">TALKOVER ON</button>
+          <span id="micStatus" class="small-state">MIC OFF</span>
+        </div>
+      </div>
+
+      <div class="live-block">
+        <span class="eyebrow">MASTER RECORDING</span>
+        <div class="live-inline">
+          <button id="recordToggle" class="live-button record">● RECORD SET</button>
+          <span id="recordTime" class="record-time">00:00</span>
+          <a id="recordDownload" class="download-link" hidden>DOWNLOAD MIX</a>
+        </div>
+      </div>
+
+      <div class="live-block right">
+        <span class="eyebrow">OUTPUT</span>
+        <div class="live-inline">
+          <span class="small-state">DECK A + DECK B + SAMPLER + MIC</span>
+        </div>
+      </div>
+    </section>
+
     <section class="sampler panel">
       <div class="sampler-head">
-        <div><span class="eyebrow">LIVE TOOLS</span><h2>SAMPLER BANK</h2></div>
+        <div>
+          <span class="eyebrow">PERFORMANCE</span>
+          <h2>SAMPLER BANK</h2>
+        </div>
         <div class="sampler-controls">
-          <label>SAMPLER VOL <input id="samplerVol" type="range" min="0" max="1.4" value="0.9" step="0.01"></label>
+          <div class="sample-banks" id="sampleBanks">
+            <button data-bank="JINGLES" class="active">JINGLES</button>
+            <button data-bank="VOCALS">VOCALS</button>
+            <button data-bank="FX">FX</button>
+            <button data-bank="DRUMS">DRUMS</button>
+          </div>
           <button id="stopSamples" class="mini-button stop-samples">■ STOP ALL</button>
         </div>
       </div>
       <div class="sampler-grid" id="samplerGrid"></div>
-      <div class="sampler-note">Sleep een lokaal audiobestand op een pad of kies <strong>LOAD</strong>. Toetsen <strong>1–8</strong> triggeren de pads. Samples lopen buiten de crossfader rechtstreeks naar de master.</div>
+      <div class="sampler-note">
+        Sleep audio op een pad of kies <strong>LOAD</strong>. Toetsen <strong>1–8</strong> triggeren de actieve bank.
+      </div>
     </section>
 
     <section class="deck-grid">
+
       <article class="deck panel deck-a" data-deck="A">
         <div class="deck-topline">
           <span class="deck-label">DECK A</span>
           <span class="deck-state" id="stateA">EMPTY</span>
         </div>
+
         <div class="track-head">
           <div class="track-meta">
             <div class="track-title" id="titleA">Sleep een track naar Deck A</div>
@@ -57,6 +100,15 @@
         <div class="wave-wrap" data-drop-deck="A">
           <canvas id="waveA" class="waveform" width="1200" height="180"></canvas>
           <div class="drop-hint">DROP TRACK A</div>
+        </div>
+
+        <div class="hotcue-row">
+          <span>HOT CUE</span>
+          <button data-hotcue="0" data-deck="A">A</button>
+          <button data-hotcue="1" data-deck="A">B</button>
+          <button data-hotcue="2" data-deck="A">C</button>
+          <button data-hotcue="3" data-deck="A">D</button>
+          <small>Shift + klik = wissen</small>
         </div>
 
         <div class="deck-body">
@@ -74,17 +126,20 @@
               <button class="pad play" data-action="play" data-deck="A">▶ PLAY</button>
               <button class="pad sync" data-action="sync" data-deck="A">SYNC</button>
             </div>
+
             <div class="pitch-row">
               <span>-10%</span>
               <input class="accent-a" id="pitchA" type="range" min="-10" max="10" value="0" step="0.1" />
               <span>+10%</span>
             </div>
+
             <div class="loop-row">
               <span>LOOP</span>
               <button data-loop="4" data-deck="A">4</button>
               <button data-loop="8" data-deck="A">8</button>
               <button data-loop="16" data-deck="A">16</button>
             </div>
+
             <div class="fx-rack">
               <div class="fx-head"><span>FX</span><strong>A</strong></div>
               <label>FILTER <input id="filterA" type="range" min="-1" max="1" value="0" step="0.01" /></label>
@@ -97,37 +152,67 @@
 
       <aside class="mixer panel">
         <div class="mixer-head">
-          <span>MIXER</span>
-          <button class="rec-btn" id="recBtn" disabled title="Opnemen volgt in een volgende iteratie">● REC</button>
-        </div>
-        <div class="channels">
-          <div class="channel channel-a">
-            <span class="ch-tag">CH A</span>
-            <label class="knob-label">GAIN<input id="gainA" type="range" min="0" max="1.5" value="1" step="0.01"></label>
-            <label class="knob-label">HIGH<input id="highA" type="range" min="-12" max="12" value="0" step="0.1"></label>
-            <label class="knob-label">MID<input id="midA" type="range" min="-12" max="12" value="0" step="0.1"></label>
-            <label class="knob-label">LOW<input id="lowA" type="range" min="-12" max="12" value="0" step="0.1"></label>
-            <div class="vu" id="vuA"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            <label class="fader-label">VOL<input class="vertical" id="volA" type="range" min="0" max="1" value="0.9" step="0.01"></label>
+          <div>
+            <span class="eyebrow">ORDINIS PERFORMANCE MIXER</span>
+            <strong>4 CHANNEL</strong>
           </div>
-          <div class="center-strip">
-            <div class="logo-orb">HP</div>
-            <span class="mini-label">MASTER</span>
+          <div class="master-control">
+            <span>MASTER</span>
             <input id="masterVol" type="range" min="0" max="1" value="0.85" step="0.01" />
-            <button class="mini-button" id="autoBpm">AUTO BPM</button>
-          </div>
-          <div class="channel channel-b">
-            <span class="ch-tag">CH B</span>
-            <label class="knob-label">GAIN<input id="gainB" type="range" min="0" max="1.5" value="1" step="0.01"></label>
-            <label class="knob-label">HIGH<input id="highB" type="range" min="-12" max="12" value="0" step="0.1"></label>
-            <label class="knob-label">MID<input id="midB" type="range" min="-12" max="12" value="0" step="0.1"></label>
-            <label class="knob-label">LOW<input id="lowB" type="range" min="-12" max="12" value="0" step="0.1"></label>
-            <div class="vu" id="vuB"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-            <label class="fader-label">VOL<input class="vertical" id="volB" type="range" min="0" max="1" value="0.9" step="0.01"></label>
           </div>
         </div>
+
+        <div class="mixer-channels">
+          <div class="mix-channel channel-a">
+            <span class="ch-tag">DECK A</span>
+            <label>GAIN<input id="gainA" type="range" min="0" max="1.5" value="1" step="0.01"></label>
+            <label>HIGH<input id="highA" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <label>MID<input id="midA" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <label>LOW<input id="lowA" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <button class="cue-monitor" data-monitor="A">CUE</button>
+            <label class="channel-fader">VOL<input class="vertical" id="volA" type="range" min="0" max="1" value="0.9" step="0.01"></label>
+          </div>
+
+          <div class="mix-channel channel-b">
+            <span class="ch-tag">DECK B</span>
+            <label>GAIN<input id="gainB" type="range" min="0" max="1.5" value="1" step="0.01"></label>
+            <label>HIGH<input id="highB" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <label>MID<input id="midB" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <label>LOW<input id="lowB" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <button class="cue-monitor" data-monitor="B">CUE</button>
+            <label class="channel-fader">VOL<input class="vertical" id="volB" type="range" min="0" max="1" value="0.9" step="0.01"></label>
+          </div>
+
+          <div class="mix-channel channel-sampler">
+            <span class="ch-tag">SAMPLER</span>
+            <label>GAIN<input id="samplerGain" type="range" min="0" max="1.5" value="1" step="0.01"></label>
+            <label>HIGH<input id="samplerHigh" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <label>MID<input id="samplerMid" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <label>LOW<input id="samplerLow" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <button class="cue-monitor" data-monitor="SAMPLER">CUE</button>
+            <label class="channel-fader">VOL<input class="vertical" id="samplerVol" type="range" min="0" max="1" value="0.9" step="0.01"></label>
+          </div>
+
+          <div class="mix-channel channel-mic">
+            <span class="ch-tag">MIC</span>
+            <label>GAIN<input id="micGain" type="range" min="0" max="2" value="1" step="0.01"></label>
+            <label>HIGH<input id="micHigh" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <label>MID<input id="micMid" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <label>LOW<input id="micLow" type="range" min="-12" max="12" value="0" step="0.1"></label>
+            <button id="micMute" class="cue-monitor">MUTE</button>
+            <label class="channel-fader">VOL<input class="vertical" id="micVol" type="range" min="0" max="1" value="0.85" step="0.01"></label>
+          </div>
+        </div>
+
+        <div class="talkover-strip">
+          <span>TALKOVER</span>
+          <label>DUCK <input id="talkoverDepth" type="range" min="0.15" max="0.8" value="0.35" step="0.01"></label>
+          <label>SENS <input id="talkoverSensitivity" type="range" min="0.01" max="0.2" value="0.055" step="0.005"></label>
+          <div class="mic-meter"><i id="micMeterFill"></i></div>
+        </div>
+
         <div class="xfade-wrap">
-          <div class="xfade-labels"><span>A</span><strong>CROSSFADER</strong><span>B</span></div>
+          <div class="xfade-labels"><span>A</span><strong>CROSSFADER A/B</strong><span>B</span></div>
           <input id="crossfader" type="range" min="-1" max="1" value="0" step="0.01" />
         </div>
       </aside>
@@ -137,6 +222,7 @@
           <span class="deck-label">DECK B</span>
           <span class="deck-state" id="stateB">EMPTY</span>
         </div>
+
         <div class="track-head">
           <div class="track-meta">
             <div class="track-title" id="titleB">Sleep een track naar Deck B</div>
@@ -151,6 +237,15 @@
         <div class="wave-wrap" data-drop-deck="B">
           <canvas id="waveB" class="waveform" width="1200" height="180"></canvas>
           <div class="drop-hint">DROP TRACK B</div>
+        </div>
+
+        <div class="hotcue-row">
+          <span>HOT CUE</span>
+          <button data-hotcue="0" data-deck="B">A</button>
+          <button data-hotcue="1" data-deck="B">B</button>
+          <button data-hotcue="2" data-deck="B">C</button>
+          <button data-hotcue="3" data-deck="B">D</button>
+          <small>Shift + klik = wissen</small>
         </div>
 
         <div class="deck-body">
@@ -168,17 +263,20 @@
               <button class="pad play" data-action="play" data-deck="B">▶ PLAY</button>
               <button class="pad sync" data-action="sync" data-deck="B">SYNC</button>
             </div>
+
             <div class="pitch-row">
               <span>-10%</span>
               <input class="accent-b" id="pitchB" type="range" min="-10" max="10" value="0" step="0.1" />
               <span>+10%</span>
             </div>
+
             <div class="loop-row">
               <span>LOOP</span>
               <button data-loop="4" data-deck="B">4</button>
               <button data-loop="8" data-deck="B">8</button>
               <button data-loop="16" data-deck="B">16</button>
             </div>
+
             <div class="fx-rack">
               <div class="fx-head"><span>FX</span><strong>B</strong></div>
               <label>FILTER <input id="filterB" type="range" min="-1" max="1" value="0" step="0.01" /></label>
@@ -188,6 +286,7 @@
           </div>
         </div>
       </article>
+
     </section>
 
     <section class="library panel">
@@ -200,6 +299,7 @@
           <button id="addPlaylist">＋</button>
         </div>
       </aside>
+
       <div class="track-library">
         <div class="library-toolbar">
           <div>
@@ -211,25 +311,49 @@
             <label class="file-button">＋ MP3 / AUDIO<input id="filePicker" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg" multiple /></label>
           </div>
         </div>
+
+        <div class="source-note">
+          <strong>Streaming-bronnen:</strong> lokale audio is nu de mixbron. Spotify kan later worden gekoppeld voor playlistreferenties en ontdekking, niet als directe mix-audiobron.
+        </div>
+
         <div class="drop-library" id="dropLibrary">Sleep lokale MP3-bestanden hierheen of klik op <strong>MP3 / AUDIO</strong></div>
+
         <div class="track-table">
           <div class="track-row table-head"><span>#</span><span>TITEL</span><span>BPM</span><span>DUUR</span><span>PLAYLIST</span><span>LOAD</span></div>
           <div id="trackRows"></div>
         </div>
       </div>
     </section>
+
   </main>
+
+  <footer class="footer">
+    <span>HET PODIUM // DJ LAB 0.2.0</span>
+    <strong>Developed by Ordinis Software</strong>
+  </footer>
 
   <div class="modal-backdrop" id="settingsModal" hidden>
     <section class="modal panel">
-      <div class="modal-head"><div><span class="eyebrow">DJ LAB</span><h2>Instellingen</h2></div><button class="icon-btn" id="closeSettings">✕</button></div>
+      <div class="modal-head">
+        <div><span class="eyebrow">DJ LAB</span><h2>Instellingen</h2></div>
+        <button class="icon-btn" id="closeSettings">✕</button>
+      </div>
       <div class="settings-grid">
         <label><span>Master volume</span><input id="settingsMaster" type="range" min="0" max="1" value="0.85" step="0.01"></label>
         <label><span>Crossfader curve</span><select id="xfadeCurve"><option value="equal">Equal power</option><option value="linear">Linear</option></select></label>
         <label class="toggle-line"><span>Auto BPM bij import</span><input id="autoAnalyze" type="checkbox"></label>
-        <div class="theme-picker"><span>Look & feel</span><div><button data-theme-pick="neon" class="theme neon active">NEON</button><button data-theme-pick="ultraviolet" class="theme ultraviolet">UV</button><button data-theme-pick="acid" class="theme acid">ACID</button></div></div>
+        <div class="theme-picker">
+          <span>Look & feel</span>
+          <div>
+            <button data-theme-pick="neon" class="theme neon active">NEON</button>
+            <button data-theme-pick="ultraviolet" class="theme ultraviolet">UV</button>
+            <button data-theme-pick="acid" class="theme acid">ACID</button>
+          </div>
+        </div>
       </div>
-      <div class="settings-note">Lokale bestanden worden in deze alpha niet geüpload. Na een browser-refresh moet je de audio opnieuw selecteren; playlistnamen blijven wel bewaard.</div>
+      <div class="settings-note">
+        Microfoon en opnemen werken lokaal in je browser. Voor de microfoon vraagt de browser eerst toestemming.
+      </div>
     </section>
   </div>
 
