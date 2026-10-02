@@ -21,6 +21,7 @@ let samplerLow=null;
 let samplerMid=null;
 let samplerHigh=null;
 let samplerChannel=null;
+let samplerDuck=null;
 
 let micStream=null;
 let micSource=null;
@@ -80,12 +81,14 @@ function ensureAudio(){
     samplerMid=ctx.createBiquadFilter();
     samplerHigh=ctx.createBiquadFilter();
     samplerChannel=ctx.createGain();
+    samplerDuck=ctx.createGain();
+    samplerDuck.gain.value=1;
 
     samplerLow.type="lowshelf";samplerLow.frequency.value=250;
     samplerMid.type="peaking";samplerMid.frequency.value=1200;samplerMid.Q.value=.7;
     samplerHigh.type="highshelf";samplerHigh.frequency.value=5000;
 
-    samplerInput.connect(samplerLow).connect(samplerMid).connect(samplerHigh).connect(samplerChannel).connect(musicBus);
+    samplerInput.connect(samplerLow).connect(samplerMid).connect(samplerHigh).connect(samplerChannel).connect(samplerDuck).connect(master);
 
     deckA.init();
     deckB.init();
@@ -135,6 +138,7 @@ class Deck{
     const revWet=ctx.createGain();
     const channel=ctx.createGain();
     const xf=ctx.createGain();
+    const duck=ctx.createGain();
 
     low.type="lowshelf";low.frequency.value=250;
     mid.type="peaking";mid.frequency.value=1200;mid.Q.value=.7;
@@ -147,15 +151,16 @@ class Deck{
     revWet.gain.value=0;
     channel.gain.value=.9;
     xf.gain.value=Math.SQRT1_2;
+    duck.gain.value=1;
 
     input.connect(low).connect(mid).connect(high).connect(filter);
     filter.connect(dry).connect(channel);
     filter.connect(delay).connect(delayWet).connect(channel);
     delay.connect(feedback).connect(delay);
     filter.connect(conv).connect(revWet).connect(channel);
-    channel.connect(xf).connect(musicBus);
+    channel.connect(xf).connect(duck).connect(master);
 
-    this.nodes={input,low,mid,high,filter,delay,feedback,delayWet,conv,revWet,channel,xf};
+    this.nodes={input,low,mid,high,filter,delay,feedback,delayWet,conv,revWet,channel,xf,duck};
   }
 
   current(){
@@ -595,7 +600,7 @@ function stopMic(){
   micAnalyser=null;
   micChannel=null;
 
-  if(musicBus&&ctx)musicBus.gain.setTargetAtTime(1,ctx.currentTime,.08);
+  applyMusicDuck(1,.08);
 
   $("micToggle").textContent="🎙 MIC START";
   $("micToggle").classList.remove("active");
@@ -617,7 +622,15 @@ function toggleTalkover(){
   $("talkoverToggle").setAttribute("aria-pressed",String(talkoverEnabled));
   $("talkoverToggle").textContent=talkoverEnabled?"TALKOVER ON":"TALKOVER OFF";
 
-  if(!talkoverEnabled&&ctx&&musicBus)musicBus.gain.setTargetAtTime(1,ctx.currentTime,.08);
+  if(!talkoverEnabled)applyMusicDuck(1,.08);
+}
+
+function applyMusicDuck(value, timeConstant){
+  if(!ctx)return;
+  const tc=timeConstant||.08;
+  if(deckA.nodes?.duck)deckA.nodes.duck.gain.setTargetAtTime(value,ctx.currentTime,tc);
+  if(deckB.nodes?.duck)deckB.nodes.duck.gain.setTargetAtTime(value,ctx.currentTime,tc);
+  if(samplerDuck)samplerDuck.gain.setTargetAtTime(value,ctx.currentTime,tc);
 }
 
 function monitorMicAndTalkover(){
@@ -636,15 +649,15 @@ function monitorMicAndTalkover(){
     rms=Math.sqrt(sum/data.length);
     $("micMeterFill").style.width=Math.min(100,rms*700)+"%";
 
-    if(talkoverEnabled&&musicBus){
+    if(talkoverEnabled){
       const sensitivity=Number($("talkoverSensitivity").value);
-      const duck=Number($("talkoverDepth").value);
-      const target=rms>sensitivity?duck:1;
-      musicBus.gain.setTargetAtTime(target,ctx.currentTime,target<1?.035:.16);
+      const duckLevel=Number($("talkoverDepth").value);
+      const target=rms>sensitivity?duckLevel:1;
+      applyMusicDuck(target,target<1?.035:.16);
     }
   }else{
     $("micMeterFill").style.width="0%";
-    if(ctx&&musicBus&&(!talkoverEnabled||!micStream||micMuted))musicBus.gain.setTargetAtTime(1,ctx.currentTime,.12);
+    if(ctx&&(!talkoverEnabled||!micStream||micMuted))applyMusicDuck(1,.12);
   }
 
   requestAnimationFrame(monitorMicAndTalkover);
