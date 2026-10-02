@@ -1,0 +1,10 @@
+{
+  "name": "het-podium-dj-lab",
+  "version": "0.1.3",
+  "private": true,
+  "scripts": {
+    "dev": "python3 -m http.server 4173",
+    "start": "python3 -m http.server 4173",
+    "build": "node -e \"console.log('Static build OK — no compile step required.')\""
+  }
+}
