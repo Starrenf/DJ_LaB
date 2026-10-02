@@ -25,7 +25,7 @@ function impulse(){
 }
 class Deck{
   constructor(id){
-    this.id=id;this.buffer=null;this.track=null;this.source=null;this.playing=false;this.offset=0;this.startedAt=0;this.rate=1;this.bpm=null;this.cue=0;this.cuePreview=false;this.loopBeats=0;this.nodes=null;this.peaks=[];
+    this.id=id;this.buffer=null;this.track=null;this.source=null;this.playing=false;this.offset=0;this.startedAt=0;this.rate=1;this.bpm=null;this.cue=0;this.cueHeld=false;this.cuePreview=false;this.cueTakeover=false;this.loopBeats=0;this.nodes=null;this.peaks=[];
   }
   init(){
     if(this.nodes)return;
@@ -56,6 +56,16 @@ class Deck{
   }
   play(){
     if(!this.buffer)return toast("Laad eerst een track");ensureAudio();
+
+    // DJ-style CUE + PLAY takeover:
+    // while CUE preview is playing, pressing PLAY latches playback.
+    if(this.cueHeld&&this.cuePreview&&this.playing){
+      this.cueTakeover=true;
+      this.cuePreview=false;
+      this.update();
+      return;
+    }
+
     if(this.playing){this.pause(false);return}
     if(this.offset>=this.buffer.duration-.02)this.offset=0;
     this.source=this.sourceAt(this.offset);this.startedAt=ctx.currentTime;this.source.start(0,this.offset);this.playing=true;this.update();
@@ -66,12 +76,62 @@ class Deck{
   seek(t){if(!this.buffer)return;const was=this.playing;if(was)this.pause(false);this.offset=clamp(t,0,this.buffer.duration);if(was)this.play();this.draw();this.update()}
   cueDown(){
     if(!this.buffer)return;
-    if(this.playing){this.pause(true);return}
-    if(Math.abs(this.offset-this.cue)>.08){this.cue=this.offset;this.draw();toast("CUE "+fmt(this.cue));return}
-    this.cuePreview=true;this.play();
+    this.cueHeld=true;
+    this.cueTakeover=false;
+
+    // During normal playback: return to the stored cue and stop there.
+    if(this.playing&&!this.cuePreview){
+      this.pause(true);
+      this.offset=this.cue;
+      this.draw();
+      toast("Terug naar CUE "+fmt(this.cue));
+      return;
+    }
+
+    // While paused away from the stored cue: set a new cue point.
+    if(!this.playing&&Math.abs(this.offset-this.cue)>.06){
+      this.cue=this.offset;
+      this.draw();
+      this.update();
+      toast("CUE gezet op "+fmt(this.cue));
+      return;
+    }
+
+    // While paused exactly at CUE: hold-to-preview.
+    if(!this.playing){
+      this.offset=this.cue;
+      this.cuePreview=true;
+      if(this.offset>=this.buffer.duration-.02)this.offset=this.cue=0;
+      this.source=this.sourceAt(this.offset);
+      this.startedAt=ctx.currentTime;
+      this.source.start(0,this.offset);
+      this.playing=true;
+      this.update();
+    }
   }
   cueUp(){
-    if(this.cuePreview){this.cuePreview=false;if(this.playing)this.pause(false);this.offset=this.cue;this.update();this.draw()}
+    this.cueHeld=false;
+
+    // PLAY was pressed while holding CUE: keep playing.
+    if(this.cueTakeover){
+      this.cueTakeover=false;
+      this.cuePreview=false;
+      this.update();
+      return;
+    }
+
+    // Normal CUE preview: stop and snap back to the cue point.
+    if(this.cuePreview){
+      this.cuePreview=false;
+      if(this.playing){
+        try{this.source.stop()}catch(e){}
+        this.source=null;
+        this.playing=false;
+      }
+      this.offset=this.cue;
+      this.update();
+      this.draw();
+    }
   }
   setRate(r){r=clamp(r,.8,1.2);const t=this.current(),was=this.playing;if(was)this.pause(false);this.rate=r;this.offset=t;if(was)this.play();$("pitch"+this.id).value=((r-1)*100).toFixed(1);if(this.bpm)$("bpm"+this.id).value=(this.bpm*r).toFixed(1)}
   sync(other){if(!this.bpm||!other.bpm)return toast("BPM ontbreekt");this.setRate((other.bpm*other.rate)/this.bpm);document.querySelector('[data-action="sync"][data-deck="'+this.id+'"]').classList.add("active")}
