@@ -124,7 +124,12 @@ class Deck{
     this.peaks=[];
     this.hotCues=Array(8).fill(null);
     this.padMode="hotcue";
-    this.quantize=true;
+    this.quantize=false;
+    this.beatOffset=null;
+    this.loopStart=0;
+    this.loopEnd=0;
+    this.activePadFx=new Map();
+    this.loadVersion=0;
   }
 
   init(){
@@ -171,27 +176,41 @@ class Deck{
   current(){
     if(!this.buffer)return 0;
     if(!this.playing)return this.offset;
-    return clamp(this.offset+(ctx.currentTime-this.startedAt)*this.rate,0,this.buffer.duration);
+    const position=this.offset+(ctx.currentTime-this.startedAt)*this.rate;
+    if(this.source?.loop){
+      const start=this.source.loopStart,end=this.source.loopEnd,length=end-start;
+      if(length>0&&position>=end)return start+(position-start)%length;
+    }
+    return clamp(position,0,this.buffer.duration);
   }
 
   async load(track){
     ensureAudio();
-    if(this.playing)this.pause(false);
-
+    const version=++this.loadVersion;
+    let buffer;
     try{
-      this.buffer=await ctx.decodeAudioData((await track.file.arrayBuffer()).slice(0));
+      buffer=await ctx.decodeAudioData((await track.file.arrayBuffer()).slice(0));
     }catch(e){
-      toast("Audio kon niet worden gelezen");
+      if(version===this.loadVersion)toast("Audio kon niet worden gelezen");
       return;
     }
-
+    if(version!==this.loadVersion)return;
+    if(this.playing)this.pause(false);
+    this.clearPadFx();
+    this.buffer=buffer;
     this.track=track;
+    this.cueHeld=this.cuePreview=this.cueTakeover=false;
     this.offset=0;
     this.cue=0;
     this.rate=1;
     this.bpm=track.bpm||null;
     this.loopBeats=0;
-    this.hotCues=Array(8).fill(null);
+    this.loopStart=this.loopEnd=0;
+    this.quantize=false;
+    this.beatOffset=Number.isFinite(track.beatOffset)?track.beatOffset:null;
+    this.hotCues=track.hotCues||(track.hotCues=Array(8).fill(null));
+    this.renderLoopState();
+    this.renderGridState();
 
     $("title"+this.id).textContent=track.title;
     $("artist"+this.id).textContent="Local file";
@@ -204,26 +223,30 @@ class Deck{
     this.renderHotCues();
     $("overviewTitle"+this.id).textContent=track.title;
     $("overviewBpm"+this.id).textContent=this.bpm?this.bpm.toFixed(1)+" BPM":"--.- BPM";
-    recordHistory(track,this.id);
+    renderLibrary();
     this.draw();
     this.update();
     toast(track.title+" geladen in Deck "+this.id);
   }
 
   sourceAt(pos){
+    if(this.loopBeats&&(pos<this.loopStart||pos>=this.loopEnd||this.loopEnd<=this.loopStart)){
+      this.loopBeats=0;
+      this.renderLoopState();
+    }
     const s=ctx.createBufferSource();
     s.buffer=this.buffer;
     s.playbackRate.value=this.rate;
     s.connect(this.nodes.input);
 
     if(this.loopBeats&&this.bpm){
-      const len=this.loopBeats*60/(this.bpm*this.rate);
       s.loop=true;
-      s.loopStart=pos;
-      s.loopEnd=Math.min(this.buffer.duration,pos+len);
+      s.loopStart=this.loopStart;
+      s.loopEnd=this.loopEnd;
     }
 
     s.onended=()=>{
+      s.disconnect();
       if(this.source===s&&!s.loop){
         this.playing=false;
         this.offset=0;
@@ -242,6 +265,7 @@ class Deck{
     if(this.cueHeld&&this.cuePreview&&this.playing){
       this.cueTakeover=true;
       this.cuePreview=false;
+      recordHistory(this.track,this.id);
       this.update();
       return;
     }
@@ -256,6 +280,7 @@ class Deck{
     this.startedAt=ctx.currentTime;
     this.source.start(0,this.offset);
     this.playing=true;
+    recordHistory(this.track,this.id);
     this.update();
   }
 
@@ -275,13 +300,17 @@ class Deck{
     const was=this.playing;
     if(was)this.pause(false);
     this.offset=clamp(t,0,this.buffer.duration);
-    if(was)this.startFromOffset();
+    if(this.loopBeats&&(this.offset<this.loopStart||this.offset>=this.loopEnd)){
+      this.loopBeats=0;
+      this.renderLoopState();
+    }
+    if(was&&this.offset<this.buffer.duration)this.startFromOffset();
     this.draw();
     this.update();
   }
 
   startFromOffset(){
-    if(!this.buffer)return;
+    if(!this.buffer||this.offset>=this.buffer.duration)return;
     this.source=this.sourceAt(this.offset);
     this.startedAt=ctx.currentTime;
     this.source.start(0,this.offset);
@@ -368,13 +397,14 @@ class Deck{
       this.offset=target;
       this.draw();
       this.startFromOffset();
+      recordHistory(this.track,this.id);
     }
   }
 
   quantizeTime(t){
-    if(!this.quantize||!this.bpm)return t;
+    if(!this.quantize||!this.bpm||this.beatOffset===null)return t;
     const beat=60/this.bpm;
-    return clamp(Math.round(t/beat)*beat,0,this.buffer?this.buffer.duration:t);
+    return clamp(this.beatOffset+Math.round((t-this.beatOffset)/beat)*beat,0,this.buffer?this.buffer.duration:t);
   }
 
   beatJump(beats){
@@ -390,54 +420,84 @@ class Deck{
     this.renderPerformancePads();
   }
 
-  toggleQuantize(){
-    this.quantize=!this.quantize;
+  renderGridState(){
     const b=document.querySelector('[data-action="quantize"][data-deck="'+this.id+'"]');
-    if(b)b.classList.toggle("active",this.quantize);
+    if(b){b.classList.toggle("active",this.quantize);b.setAttribute("aria-pressed",String(this.quantize));}
+    $("gridOffset"+this.id).value=this.beatOffset===null?"":this.beatOffset.toFixed(3);
+  }
+
+  setBeatOffset(value){
+    if(!this.buffer)return toast("Laad eerst een track");
+    if(!Number.isFinite(value)||value<0||value>=this.buffer.duration){this.renderGridState();return toast("Kies een beat binnen de track");}
+    this.beatOffset=value;
+    if(this.track)this.track.beatOffset=value;
+    this.renderGridState();
+    this.draw();
+  }
+
+  toggleQuantize(){
+    if(!this.quantize&&(!this.bpm||this.beatOffset===null))return toast("Stel eerst BPM en een eerste beat in");
+    this.quantize=!this.quantize;
+    this.renderGridState();
     toast("Quantize "+(this.quantize?"ON":"OFF")+" · Deck "+this.id);
   }
 
-  applyPadFx(index,on){
+  clearPadFx(){
+    this.activePadFx.clear();
+    document.querySelectorAll('#performancePads'+this.id+' .active').forEach(b=>b.classList.remove("active"));
+    this.refreshPadFx();
+  }
+
+  applyPadFx(index,on,token="default"){
     if(!this.buffer)return;
     ensureAudio();
+    if(on){
+      if(!this.activePadFx.has(index))this.activePadFx.set(index,new Set());
+      this.activePadFx.get(index).add(token);
+    }else{
+      this.activePadFx.get(index)?.delete(token);
+      if(!this.activePadFx.get(index)?.size)this.activePadFx.delete(index);
+    }
+    this.refreshPadFx();
+  }
+
+  refreshPadFx(){
     const n=this.nodes;
     if(!n)return;
-
-    if(!on){
-      updateChannel(this.id);
-      updateFx(this.id);
-      return;
-    }
-
-    switch(index){
-      case 0:
-        n.delay.delayTime.value=this.bpm?Math.min(.75,(60/this.bpm)/2):.28;
-        n.delayWet.gain.value=.68;n.feedback.gain.value=.42;break;
-      case 1:
-        n.revWet.gain.value=.78;break;
-      case 2:
-        n.filter.type="lowpass";n.filter.frequency.value=900;break;
-      case 3:
-        n.filter.type="highpass";n.filter.frequency.value=700;break;
-      case 4:
-        n.low.gain.value=-18;break;
-      case 5:
-        n.mid.gain.value=-18;break;
-      case 6:
-        n.high.gain.value=-18;break;
-      case 7:
-        n.delayWet.gain.value=.4;n.feedback.gain.value=.34;n.revWet.gain.value=.65;
-        n.filter.type="lowpass";n.filter.frequency.value=2600;break;
+    updateChannel(this.id);
+    updateFx(this.id);
+    // Compose held pads from slider values; releasing one preserves the others.
+    for(const index of [...this.activePadFx.keys()].sort((a,b)=>a-b)){
+      switch(index){
+        case 0:
+          n.delay.delayTime.value=this.bpm?Math.min(.75,30/(this.bpm*this.rate)):.28;
+          n.delayWet.gain.value=Math.max(n.delayWet.gain.value,.68);
+          n.feedback.gain.value=Math.max(n.feedback.gain.value,.42);break;
+        case 1:n.revWet.gain.value=Math.max(n.revWet.gain.value,.78);break;
+        case 2:n.filter.type="lowpass";n.filter.frequency.value=900;break;
+        case 3:n.filter.type="highpass";n.filter.frequency.value=700;break;
+        case 4:n.low.gain.value=-18;break;
+        case 5:n.mid.gain.value=-18;break;
+        case 6:n.high.gain.value=-18;break;
+        case 7:
+          n.delayWet.gain.value=Math.max(n.delayWet.gain.value,.4);
+          n.feedback.gain.value=Math.max(n.feedback.gain.value,.34);
+          n.revWet.gain.value=Math.max(n.revWet.gain.value,.65);
+          n.filter.type="lowpass";n.filter.frequency.value=2600;break;
+      }
     }
   }
 
   renderHotCues(){
     this.renderPerformancePads();
+    const other=this.id==="A"?deckB:deckA;
+    if(this.track&&other.track===this.track&&other.padMode==="hotcue")other.renderPerformancePads();
   }
 
   renderPerformancePads(){
     const box=$("performancePads"+this.id);
     if(!box)return;
+    this.clearPadFx();
     box.innerHTML="";
 
     const loopValues=[.5,1,2,4,8,16,32,64];
@@ -459,16 +519,21 @@ class Deck{
         const v=loopValues[i];
         b.classList.toggle("active",this.loopBeats===v);
         b.innerHTML=(v<1?"1/2":v)+"<small>BEAT LOOP</small>";
-        b.onclick=()=>{this.toggleLoop(v);this.renderPerformancePads()};
+        b.dataset.loopPad=String(v);
+        b.onclick=()=>this.toggleLoop(v);
       }else if(this.padMode==="jump"){
         const v=jumpValues[i];
         b.innerHTML=(v>0?"+":"")+v+"<small>BEATS</small>";
         b.onclick=()=>this.beatJump(v);
       }else{
         b.innerHTML=fxLabels[i]+"<small>HOLD FX</small>";
-        const off=()=>{b.classList.remove("active");this.applyPadFx(i,false)};
-        b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture?.(e.pointerId);b.classList.add("active");this.applyPadFx(i,true)};
-        ["pointerup","pointercancel","lostpointercapture"].forEach(ev=>b.addEventListener(ev,off));
+        const press=token=>{this.applyPadFx(i,true,token);b.classList.add("active")};
+        const release=token=>{this.applyPadFx(i,false,token);b.classList.toggle("active",this.activePadFx.has(i))};
+        b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);press("pointer"+e.pointerId)};
+        ["pointerup","pointercancel","lostpointercapture"].forEach(ev=>b.addEventListener(ev,e=>release("pointer"+e.pointerId)));
+        b.onkeydown=e=>{if([" ","Enter"].includes(e.key)){e.preventDefault();if(!e.repeat)press("key"+e.key)}};
+        b.onkeyup=e=>{if([" ","Enter"].includes(e.key)){e.preventDefault();release("key"+e.key)}};
+        b.onblur=()=>{release("key ");release("keyEnter")};
       }
 
       box.appendChild(b);
@@ -480,6 +545,7 @@ class Deck{
     const t=this.current(),was=this.playing;
     if(was)this.pause(false);
     this.rate=r;
+    this.refreshPadFx();
     this.offset=t;
     if(was)this.startFromOffset();
     $("pitch"+this.id).value=((r-1)*100).toFixed(1);
@@ -492,19 +558,33 @@ class Deck{
     document.querySelector('[data-action="sync"][data-deck="'+this.id+'"]').classList.add("active");
   }
 
+  renderLoopState(){
+    document.querySelectorAll('[data-loop][data-deck="'+this.id+'"], #performancePads'+this.id+' [data-loop-pad]').forEach(b=>{
+      const active=Number(b.dataset.loop||b.dataset.loopPad)===this.loopBeats;
+      b.classList.toggle("active",active);
+      b.setAttribute("aria-pressed",String(active));
+    });
+  }
+
   toggleLoop(n){
-    this.loopBeats=this.loopBeats===n?0:n;
-    document.querySelectorAll('[data-loop][data-deck="'+this.id+'"]').forEach(b=>b.classList.toggle("active",Number(b.dataset.loop)===this.loopBeats));
-    if(this.playing){
-      const t=this.quantizeTime(this.current());
-      this.pause(false);
-      this.offset=t;
-      this.startFromOffset();
-    }
+    if(!this.buffer)return toast("Laad eerst een track");
+    if(!this.bpm)return toast("Stel eerst BPM in voor Beat Loop");
+    const was=this.playing,position=this.current();
+    const off=this.loopBeats===n;
+    const start=off?position:this.quantizeTime(position);
+    const end=start+n*60/this.bpm;
+    if(!off&&end>this.buffer.duration)return toast("Onvoldoende audio voor deze loop");
+    if(was)this.pause(false);
+    this.loopBeats=off?0:n;
+    if(!off){this.loopStart=start;this.loopEnd=end;}
+    this.offset=start;
+    this.renderLoopState();
+    if(was)this.startFromOffset();
+    this.update();
   }
 
   makePeaks(){
-    const data=this.buffer.getChannelData(0),bins=220,step=Math.max(1,Math.floor(data.length/bins));
+    const data=this.buffer.getChannelData(0),bins=Math.min(100000,Math.max(220,Math.ceil(this.buffer.duration*50))),step=Math.max(1,Math.ceil(data.length/bins));
     this.peaks=[];
     for(let i=0;i<bins;i++){
       let m=0;
@@ -525,11 +605,12 @@ class Deck{
     const prog=this.buffer?this.current()/this.buffer.duration:0;
     const accent=this.id==="A"?"#22e6ff":"#ff3bbd";
     const bw=w/this.peaks.length;
+    const stride=Math.max(1,Math.floor(this.peaks.length/w));
 
-    for(let i=0;i<this.peaks.length;i++){
+    for(let i=0;i<this.peaks.length;i+=stride){
       const ph=this.peaks[i]*h*.82;
       g.fillStyle=(i/this.peaks.length)<=prog?accent:"#34404c";
-      g.fillRect(i*bw,(h-ph)/2,Math.max(1,bw-1),ph);
+      g.fillRect(i*bw,(h-ph)/2,Math.max(1,bw*stride),ph);
     }
 
     if(this.buffer){
@@ -537,7 +618,7 @@ class Deck{
       g.fillStyle="#ffcf4a";
       g.fillRect(cueX-1,0,2,h);
 
-      const hotColors=["#22e6ff","#7dff76","#ff7a45","#ff3bbd"];
+      const hotColors=["#22e6ff","#7dff76","#ff7a45","#ff3bbd","#ffcf4a","#a789ff","#64b5ff","#ffffff"];
       this.hotCues.forEach((t,i)=>{
         if(t===null)return;
         const x=(t/this.buffer.duration)*w;
@@ -559,14 +640,13 @@ class Deck{
     if(!this.peaks.length||!this.buffer)return;
 
     const accent=this.id==="A"?"#22e6ff":"#ff3bbd";
-    const center=(this.current()/this.buffer.duration)*(this.peaks.length-1);
-    const visible=96;
-    const start=center-visible/2;
+    // Both decks share eight seconds of output time, independent of track length.
+    const visible=400,visibleSec=8*this.rate,now=this.current();
     const bw=w/visible;
-
     for(let i=0;i<visible;i++){
-      const idx=Math.floor(start+i);
-      const peak=(idx>=0&&idx<this.peaks.length)?this.peaks[idx]:0;
+      const time=now+(i/visible-.5)*visibleSec;
+      const idx=Math.floor(time/this.buffer.duration*this.peaks.length);
+      const peak=(time>=0&&time<this.buffer.duration)?this.peaks[idx]||0:0;
       const ph=Math.max(1,peak*h*.82);
       g.globalAlpha=.35+peak*.65;
       g.fillStyle=accent;
@@ -574,17 +654,15 @@ class Deck{
     }
     g.globalAlpha=1;
 
-    if(this.bpm){
+    if(this.bpm&&this.beatOffset!==null){
       const beatSec=60/this.bpm;
-      const visibleSec=(visible/this.peaks.length)*this.buffer.duration;
       const pxPerSec=w/visibleSec;
-      const now=this.current();
-      const nearest=Math.round(now/beatSec)*beatSec;
+      const nearest=this.beatOffset+Math.round((now-this.beatOffset)/beatSec)*beatSec;
       for(let n=-24;n<=24;n++){
         const bt=nearest+n*beatSec;
         const x=w/2+(bt-now)*pxPerSec;
         if(x<0||x>w)continue;
-        const bar=Math.round(bt/beatSec)%4===0;
+        const bar=Math.round((bt-this.beatOffset)/beatSec)%4===0;
         g.fillStyle=bar?"rgba(255,255,255,.28)":"rgba(255,255,255,.10)";
         g.fillRect(x,0,bar?2:1,h);
       }
@@ -648,12 +726,13 @@ function updateFx(id){
   const f=Number($("filter"+id).value);
   if(f>=0){
     n.filter.type="lowpass";
-    n.filter.frequency.value=400+Math.pow(f,2)*19600;
+    n.filter.frequency.value=20000*Math.pow(400/20000,f);
   }else{
     n.filter.type="highpass";
     n.filter.frequency.value=30+Math.pow(-f,2)*5000;
   }
 
+  n.delay.delayTime.value=.28;
   const e=Number($("echo"+id).value),r=Number($("reverb"+id).value);
   n.delayWet.gain.value=e*.75;
   n.feedback.gain.value=.18+e*.5;
@@ -894,8 +973,11 @@ async function addFiles(list){
 }
 
 function recordHistory(track,deck){
+  if(!track)return;
+  if(historyEntries[0]?.track===track&&historyEntries[0]?.deck===deck)return;
   historyEntries.unshift({track,deck,at:new Date()});
   if(historyEntries.length>100)historyEntries.length=100;
+  if(libraryView==="history")renderLibrary();
 }
 
 function togglePrepare(track){
@@ -935,7 +1017,7 @@ function renderLibrary(){
   else $("libraryTitle").textContent=selectedPlaylist==="all"?"Alle tracks":selectedPlaylist;
 
   if(!arr.length){
-    const empty=libraryView==="prepare"?"Nog geen tracks in Prepare.":libraryView==="history"?"Nog geen afgespeelde of geladen tracks.":"Nog geen tracks. Voeg lokale audio toe.";
+    const empty=libraryView==="prepare"?"Nog geen tracks in Prepare.":libraryView==="history"?"Nog geen afgespeelde tracks.":"Nog geen tracks. Voeg lokale audio toe.";
     rows.innerHTML='<div class="empty-library">'+empty+'</div>';
   }
 
@@ -1118,7 +1200,7 @@ function bindDeck(d,other){
   document.querySelector('[data-action="play"][data-deck="'+id+'"]').onclick=()=>d.play();
 
   const cue=document.querySelector('[data-action="cue"][data-deck="'+id+'"]');
-  cue.onpointerdown=e=>{e.preventDefault();d.cueDown();cue.classList.add("active")};
+  cue.onpointerdown=e=>{e.preventDefault();cue.setPointerCapture(e.pointerId);d.cueDown();cue.classList.add("active")};
   ["pointerup","pointercancel","lostpointercapture"].forEach(ev=>cue.addEventListener(ev,()=>{
     d.cueUp();
     cue.classList.remove("active");
@@ -1139,8 +1221,9 @@ function bindDeck(d,other){
     }
   };
 
-  ["gain","vol","high","mid","low"].forEach(k=>$(k+id).oninput=()=>updateChannel(id));
-  ["filter","echo","reverb"].forEach(k=>$(k+id).oninput=()=>updateFx(id));
+  ["gain","vol","high","mid","low","filter","echo","reverb"].forEach(k=>$(k+id).oninput=()=>d.refreshPadFx());
+  $("gridOffset"+id).onchange=e=>d.setBeatOffset(e.target.value.trim()===""?NaN:Number(e.target.value));
+  document.querySelector('[data-action="grid"][data-deck="'+id+'"]').onclick=()=>d.setBeatOffset(d.current());
 
   const wave=$("wave"+id);
   wave.onclick=e=>{
@@ -1209,10 +1292,14 @@ $("audioStatus").onclick=ensureAudio;
 
 document.querySelectorAll("[data-bank]").forEach(b=>b.onclick=()=>selectSampleBank(b.dataset.bank));
 
-document.querySelectorAll("[data-monitor]").forEach(b=>b.onclick=()=>{
-  b.classList.toggle("active");
-  toast("PFL-markering "+(b.classList.contains("active")?"aan":"uit")+" · aparte hoofdtelefoonuitgang volgt");
+document.querySelectorAll("[data-monitor]").forEach(b=>{
+  b.disabled=true;
+  b.textContent="PFL — GEPLAND";
+  b.title="Geen afzonderlijke hoofdtelefoonuitgang beschikbaar";
 });
+
+window.addEventListener("blur",()=>{deckA.clearPadFx();deckB.clearPadFx();deckA.cueUp();deckB.cueUp()});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){deckA.clearPadFx();deckB.clearPadFx();deckA.cueUp();deckB.cueUp()}});
 
 $("addPlaylist").onclick=()=>{
   const n=$("playlistName").value.trim();
@@ -1221,7 +1308,7 @@ $("addPlaylist").onclick=()=>{
   $("playlistName").value="";
   selectedPlaylist=n;
   savePlaylists();
-  renderLibrary();
+  setLibraryView("collection");
 };
 
 document.querySelector('[data-playlist="all"]').onclick=()=>{

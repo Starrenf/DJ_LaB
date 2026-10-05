@@ -131,3 +131,10 @@ input[type="range"]{appearance:none;height:4px;border-radius:10px;background:#30
   .stacked-waveforms canvas{height:50px}
   .pro-deck-meta span{max-width:240px}
 }
+
+.beatgrid-controls{display:flex;align-items:center;gap:8px;margin-top:8px;color:#96a5b3;font-size:8px}
+.beatgrid-controls label{display:flex;align-items:center;gap:6px}
+.beatgrid-controls input{width:105px;background:#10151d;color:var(--text);border:1px solid #29323d;padding:5px;border-radius:4px}
+.beatgrid-controls button{background:#171e28;color:var(--text);border:1px solid #475565;border-radius:4px;padding:5px;font-size:8px}
+.performance-pad{touch-action:none}
+.cue-monitor:disabled{opacity:.5;cursor:not-allowed;font-size:7px}

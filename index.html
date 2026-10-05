@@ -65,8 +65,7 @@
           <small id="overviewBpmA">--.- BPM</small>
         </div>
         <div class="wave-center-info">
-          <span>PHASE / BEAT ALIGNMENT</span>
-          <i></i>
+          <span>8 SEC / MANUAL BEAT GRID</span>
         </div>
         <div class="pro-deck-meta deck-b-meta">
           <small id="overviewBpmB">--.- BPM</small>
@@ -134,9 +133,13 @@
             <button data-pad-mode="loop" data-deck="A">BEAT LOOP</button>
             <button data-pad-mode="jump" data-deck="A">BEAT JUMP</button>
             <button data-pad-mode="fx" data-deck="A">PAD FX</button>
-            <button data-action="quantize" data-deck="A" class="quantize active">Q</button>
+            <button data-action="quantize" data-deck="A" class="quantize" aria-pressed="false" title="Quantize vereist BPM en een ingestelde eerste beat">Q</button>
           </div>
           <div class="performance-grid" id="performancePadsA"></div>
+          <div class="beatgrid-controls">
+            <label>EERSTE BEAT (s) <input id="gridOffsetA" type="number" min="0" step="0.001" placeholder="Niet ingesteld"></label>
+            <button data-action="grid" data-deck="A" title="Zet de huidige positie als eerste beat">SET BEAT</button>
+          </div>
         </div>
 
         <div class="deck-body">
@@ -274,9 +277,13 @@
             <button data-pad-mode="loop" data-deck="B">BEAT LOOP</button>
             <button data-pad-mode="jump" data-deck="B">BEAT JUMP</button>
             <button data-pad-mode="fx" data-deck="B">PAD FX</button>
-            <button data-action="quantize" data-deck="B" class="quantize active">Q</button>
+            <button data-action="quantize" data-deck="B" class="quantize" aria-pressed="false" title="Quantize vereist BPM en een ingestelde eerste beat">Q</button>
           </div>
           <div class="performance-grid" id="performancePadsB"></div>
+          <div class="beatgrid-controls">
+            <label>EERSTE BEAT (s) <input id="gridOffsetB" type="number" min="0" step="0.001" placeholder="Niet ingesteld"></label>
+            <button data-action="grid" data-deck="B" title="Zet de huidige positie als eerste beat">SET BEAT</button>
+          </div>
         </div>
 
         <div class="deck-body">
@@ -354,15 +361,15 @@
         <div class="streaming-sources">
           <span class="source-title">MUSIC SOURCES</span>
           <button class="source-chip active"><strong>LOCAL</strong><small>READY</small></button>
-          <button class="source-chip" data-stream-source="spotify"><strong>SPOTIFY</strong><small>PARTNER ACCESS</small></button>
-          <button class="source-chip" data-stream-source="apple"><strong>APPLE MUSIC</strong><small>PARTNER ACCESS</small></button>
+          <button class="source-chip" data-stream-source="spotify"><strong>SPOTIFY</strong><small>NIET BESCHIKBAAR</small></button>
+          <button class="source-chip" data-stream-source="apple"><strong>APPLE MUSIC</strong><small>GEPLAND</small></button>
           <button class="source-chip" data-stream-source="beatport"><strong>BEATPORT</strong><small>PLANNED</small></button>
           <button class="source-chip" data-stream-source="soundcloud"><strong>SOUNDCLOUD</strong><small>PLANNED</small></button>
           <button class="source-chip" data-stream-source="tidal"><strong>TIDAL</strong><small>PLANNED</small></button>
         </div>
 
         <div class="source-note">
-          <strong>Streaming:</strong> DJ LAB is voorbereid op provider-adapters. Directe Spotify-mixing vereist officiële partner-toegang; de publieke Spotify API mag niet als zelfstandige mix-audiobron worden gebruikt.
+          <strong>Streaming:</strong> Providerknoppen zijn alleen demonstraties; er zijn nog geen provider-adapters of streamingverbindingen. Directe Spotify-mixing vereist officiële partner-toegang; de publieke Spotify API mag niet als zelfstandige mix-audiobron worden gebruikt.
         </div>
 
         <div class="drop-library" id="dropLibrary">Sleep lokale MP3-bestanden hierheen of klik op <strong>MP3 / AUDIO</strong></div>

@@ -3,6 +3,9 @@
   "version": "0.3.0",
   "private": true,
   "scripts": {
+    "check": "node --check app.js",
+    "test": "node --test tests/*.test.cjs",
+    "test:browser": "node tests/browser-smoke.cjs",
     "dev": "python3 -m http.server 4173",
     "start": "python3 -m http.server 4173",
     "build": "rm -rf public && mkdir -p public && cp index.html styles.css app.js public/ && echo Static build copied to public"
