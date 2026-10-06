@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 430" role="img" aria-label="Neon DJ stage artwork">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff22b8" stop-opacity=".52"/>
+      <stop offset=".48" stop-color="#4e35ff" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#14d9ff" stop-opacity=".5"/>
+    </linearGradient>
+    <radialGradient id="burst" cx="50%" cy="48%" r="48%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".98"/>
+      <stop offset=".11" stop-color="#aef5ff" stop-opacity=".78"/>
+      <stop offset=".31" stop-color="#743cff" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#050814" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wave" x1="0" x2="1">
+      <stop offset="0" stop-color="#ff2abd"/>
+      <stop offset=".5" stop-color="#fff"/>
+      <stop offset="1" stop-color="#20dcff"/>
+    </linearGradient>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft"><feGaussianBlur stdDeviation="2.2"/></filter>
+  </defs>
+  <rect width="1600" height="430" fill="#040714"/>
+  <rect width="1600" height="430" fill="url(#bg)"/>
+  <ellipse cx="800" cy="205" rx="530" ry="310" fill="url(#burst)"/>
+
+  <g opacity=".42" filter="url(#soft)">
+    <path d="M0 120 L800 230 L1600 105" stroke="#17ddff" stroke-width="5" fill="none"/>
+    <path d="M0 80 L800 230 L1600 74" stroke="#ff33be" stroke-width="4" fill="none"/>
+    <path d="M80 0 L800 230 L1520 0" stroke="#7b52ff" stroke-width="3" fill="none"/>
+  </g>
+
+  <g opacity=".58" filter="url(#glow)" stroke="url(#wave)" stroke-width="2">
+    <path d="M0 205H42v-14h14v28h14v-39h14v51h14v-21h14v-32h14v65h14v-48h14v26h14v-58h14v82h14v-35h14v-18h14v52h14v-73h14v29h14v42h14v-94h14v123h14v-57h14v29h14v-76h14v98h14v-42h14v-25h14v69h14v-116h14v151h14v-83h14v44h14v-67h14v91h14v-54h14v25h14v-78h14v105h14v-45h14v-31h14v63h14v-92h14v119h14v-57h14v27h14v-66h14v91h14v-39h14v-24h14v55h14v-74h14v94h14v-51h14v31h14v-61h14v76h14v-34h14v-29h14v53h14v-66h14v82h14v-41h14v23h14v-54h14v71h14v-32h14v-18h14v42h14v-53h14v68h14v-27h14v16h14v-39h14v53h14v-20h14v10h14v-30h14v44h14v-16h14v8h14v-24h14v34h14v-12h14v6h14v-18h14v27h14v-9h14v4h14" fill="none"/>
+  </g>
+
+  <g fill="#03050b" opacity=".94">
+    <circle cx="800" cy="122" r="46"/>
+    <path d="M753 112c22-38 71-49 105-9l-9 18c-31-17-60-18-96 2z"/>
+    <path d="M738 175c35-31 89-33 124 0l41 105H695z"/>
+    <path d="M720 194 570 300l20 17 174-78z"/>
+    <path d="M880 194 1036 292l-20 19-179-71z"/>
+  </g>
+  <g fill="#07101f" opacity=".88">
+    <ellipse cx="805" cy="310" rx="330" ry="36"/>
+    <ellipse cx="585" cy="305" rx="145" ry="20"/>
+    <ellipse cx="1020" cy="305" rx="145" ry="20"/>
+  </g>
+  <g stroke="#13ddff" stroke-opacity=".45" fill="none">
+    <ellipse cx="585" cy="305" rx="125" ry="17" stroke-width="6"/>
+    <ellipse cx="1020" cy="305" rx="125" ry="17" stroke-width="6"/>
+  </g>
+  <g stroke="#ff36c3" stroke-opacity=".44" fill="none">
+    <ellipse cx="585" cy="305" rx="105" ry="12" stroke-width="4"/>
+    <ellipse cx="1020" cy="305" rx="105" ry="12" stroke-width="4"/>
+  </g>
+
+  <g fill="#02040a" opacity=".72">
+    <circle cx="120" cy="340" r="20"/><circle cx="195" cy="335" r="17"/><circle cx="280" cy="348" r="23"/>
+    <circle cx="1320" cy="345" r="22"/><circle cx="1405" cy="336" r="18"/><circle cx="1490" cy="347" r="22"/>
+    <path d="M105 342v88h34v-88zm73 5v83h35v-83zm80 2v81h43v-81zm1040 1v80h43v-80zm88-4v84h38v-84zm83 2v82h42v-82z"/>
+  </g>
+
+  <text x="1535" y="390" text-anchor="end" fill="#d9f8ff" opacity=".3" font-family="Inter,Segoe UI,sans-serif" font-size="19" letter-spacing="4">Frank Starren</text>
+</svg>
