@@ -15,7 +15,7 @@
       <div class="brand-mark">HP</div>
       <div>
         <div class="eyebrow">HET PODIUM</div>
-        <h1>DJ LAB <span class="beta">0.2.1</span></h1>
+        <h1>DJ LAB <span class="beta">0.3.0 PRO</span></h1>
         <div class="software-credit">by <strong>Ordinis Software</strong></div>
       </div>
     </div>
@@ -53,6 +53,30 @@
         <div class="live-inline">
           <span class="small-state">DECK A + DECK B + SAMPLER + MIC</span>
         </div>
+      </div>
+    </section>
+
+
+    <section class="pro-waveforms panel">
+      <div class="pro-wave-head">
+        <div class="pro-deck-meta deck-a-meta">
+          <strong>A</strong>
+          <span id="overviewTitleA">DECK A — LOAD TRACK</span>
+          <small id="overviewBpmA">--.- BPM</small>
+        </div>
+        <div class="wave-center-info">
+          <span>8 SEC / MANUAL BEAT GRID</span>
+        </div>
+        <div class="pro-deck-meta deck-b-meta">
+          <small id="overviewBpmB">--.- BPM</small>
+          <span id="overviewTitleB">DECK B — LOAD TRACK</span>
+          <strong>B</strong>
+        </div>
+      </div>
+      <div class="stacked-waveforms">
+        <canvas id="overviewA" width="1800" height="92"></canvas>
+        <div class="playhead-line"></div>
+        <canvas id="overviewB" width="1800" height="92"></canvas>
       </div>
     </section>
 
@@ -102,13 +126,20 @@
           <div class="drop-hint">DROP TRACK A</div>
         </div>
 
-        <div class="hotcue-row">
-          <span>HOT CUE</span>
-          <button data-hotcue="0" data-deck="A">A</button>
-          <button data-hotcue="1" data-deck="A">B</button>
-          <button data-hotcue="2" data-deck="A">C</button>
-          <button data-hotcue="3" data-deck="A">D</button>
-          <small>Shift + klik = wissen</small>
+
+        <div class="performance-panel" data-performance="A">
+          <div class="pad-mode-row">
+            <button data-pad-mode="hotcue" data-deck="A" class="active">HOT CUE</button>
+            <button data-pad-mode="loop" data-deck="A">BEAT LOOP</button>
+            <button data-pad-mode="jump" data-deck="A">BEAT JUMP</button>
+            <button data-pad-mode="fx" data-deck="A">PAD FX</button>
+            <button data-action="quantize" data-deck="A" class="quantize" aria-pressed="false" title="Quantize vereist BPM en een ingestelde eerste beat">Q</button>
+          </div>
+          <div class="performance-grid" id="performancePadsA"></div>
+          <div class="beatgrid-controls">
+            <label>EERSTE BEAT (s) <input id="gridOffsetA" type="number" min="0" step="0.001" placeholder="Niet ingesteld"></label>
+            <button data-action="grid" data-deck="A" title="Zet de huidige positie als eerste beat">SET BEAT</button>
+          </div>
         </div>
 
         <div class="deck-body">
@@ -239,13 +270,20 @@
           <div class="drop-hint">DROP TRACK B</div>
         </div>
 
-        <div class="hotcue-row">
-          <span>HOT CUE</span>
-          <button data-hotcue="0" data-deck="B">A</button>
-          <button data-hotcue="1" data-deck="B">B</button>
-          <button data-hotcue="2" data-deck="B">C</button>
-          <button data-hotcue="3" data-deck="B">D</button>
-          <small>Shift + klik = wissen</small>
+
+        <div class="performance-panel" data-performance="B">
+          <div class="pad-mode-row">
+            <button data-pad-mode="hotcue" data-deck="B" class="active">HOT CUE</button>
+            <button data-pad-mode="loop" data-deck="B">BEAT LOOP</button>
+            <button data-pad-mode="jump" data-deck="B">BEAT JUMP</button>
+            <button data-pad-mode="fx" data-deck="B">PAD FX</button>
+            <button data-action="quantize" data-deck="B" class="quantize" aria-pressed="false" title="Quantize vereist BPM en een ingestelde eerste beat">Q</button>
+          </div>
+          <div class="performance-grid" id="performancePadsB"></div>
+          <div class="beatgrid-controls">
+            <label>EERSTE BEAT (s) <input id="gridOffsetB" type="number" min="0" step="0.001" placeholder="Niet ingesteld"></label>
+            <button data-action="grid" data-deck="B" title="Zet de huidige positie als eerste beat">SET BEAT</button>
+          </div>
         </div>
 
         <div class="deck-body">
@@ -301,6 +339,13 @@
       </aside>
 
       <div class="track-library">
+
+        <div class="library-view-tabs">
+          <button data-library-view="collection" class="active">COLLECTION</button>
+          <button data-library-view="prepare">PREPARE <span id="prepareCount">0</span></button>
+          <button data-library-view="history">HISTORY</button>
+        </div>
+
         <div class="library-toolbar">
           <div>
             <span class="eyebrow">LOCAL LIBRARY</span>
@@ -312,8 +357,19 @@
           </div>
         </div>
 
+
+        <div class="streaming-sources">
+          <span class="source-title">MUSIC SOURCES</span>
+          <button class="source-chip active"><strong>LOCAL</strong><small>READY</small></button>
+          <button class="source-chip" data-stream-source="spotify"><strong>SPOTIFY</strong><small>NIET BESCHIKBAAR</small></button>
+          <button class="source-chip" data-stream-source="apple"><strong>APPLE MUSIC</strong><small>GEPLAND</small></button>
+          <button class="source-chip" data-stream-source="beatport"><strong>BEATPORT</strong><small>PLANNED</small></button>
+          <button class="source-chip" data-stream-source="soundcloud"><strong>SOUNDCLOUD</strong><small>PLANNED</small></button>
+          <button class="source-chip" data-stream-source="tidal"><strong>TIDAL</strong><small>PLANNED</small></button>
+        </div>
+
         <div class="source-note">
-          <strong>Streaming-bronnen:</strong> lokale audio is nu de mixbron. Spotify kan later worden gekoppeld voor playlistreferenties en ontdekking, niet als directe mix-audiobron.
+          <strong>Streaming:</strong> Providerknoppen zijn alleen demonstraties; er zijn nog geen provider-adapters of streamingverbindingen. Directe Spotify-mixing vereist officiële partner-toegang; de publieke Spotify API mag niet als zelfstandige mix-audiobron worden gebruikt.
         </div>
 
         <div class="drop-library" id="dropLibrary">Sleep lokale MP3-bestanden hierheen of klik op <strong>MP3 / AUDIO</strong></div>
@@ -328,7 +384,7 @@
   </main>
 
   <footer class="footer">
-    <span>HET PODIUM // DJ LAB 0.2.1</span>
+    <span>HET PODIUM // DJ LAB 0.3.0 PRO</span>
     <strong>Developed by Ordinis Software</strong>
   </footer>
 
