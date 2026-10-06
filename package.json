@@ -1,13 +1,13 @@
 {
   "name": "het-podium-dj-lab",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "scripts": {
-    "check": "node --check app.js",
+    "check": "node --check smart-mix.js && node --check app.js",
     "test": "node --test tests/*.test.cjs",
     "test:browser": "node tests/browser-smoke.cjs",
-    "dev": "python3 -m http.server 4173",
-    "start": "python3 -m http.server 4173",
-    "build": "rm -rf public && mkdir -p public && cp index.html styles.css app.js public/ && echo Static build copied to public"
+    "dev": "npm run build && python3 -m http.server 4173 --directory public",
+    "start": "npm run build && python3 -m http.server 4173 --directory public",
+    "build": "rm -rf public && mkdir -p public && cp index.html styles.css public/ && cat smart-mix.js app.js > public/app.js && echo Static build with Smart Mix copied to public"
   }
 }
