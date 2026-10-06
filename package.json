@@ -8,6 +8,6 @@
     "test:browser": "node tests/browser-smoke.cjs",
     "dev": "npm run build && python3 -m http.server 4173 --directory public",
     "start": "npm run build && python3 -m http.server 4173 --directory public",
-    "build": "rm -rf public && mkdir -p public && cp index.html styles.css public/ && cat smart-mix.js app.js > public/app.js && echo Static build with Smart Mix copied to public"
+    "build": "npm run check && npm test && rm -rf public && mkdir -p public && cp index.html styles.css public/ && cat smart-mix.js app.js > public/app.js && echo Static build with Smart Mix copied to public"
   }
 }
