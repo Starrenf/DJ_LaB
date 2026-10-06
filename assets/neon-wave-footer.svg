@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 120" preserveAspectRatio="none" role="img" aria-label="Neon audio waveform">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#ff29bc"/>
+      <stop offset=".28" stop-color="#8b4dff"/>
+      <stop offset=".55" stop-color="#18dbff"/>
+      <stop offset=".78" stop-color="#884bff"/>
+      <stop offset="1" stop-color="#ff32c0"/>
+    </linearGradient>
+    <filter id="glow" x="-100%" y="-150%" width="300%" height="400%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1600" height="120" fill="#040711"/>
+  <path d="M0 60h18v-5h18v10h18v-18h18v26h18v-10h18v-24h18v44h18v-18h18v-31h18v52h18v-21h18v-38h18v66h18v-30h18v-18h18v40h18v-58h18v81h18v-39h18v-24h18v55h18v-87h18v115h18v-60h18v35h18v-72h18v97h18v-48h18v-31h18v67h18v-104h18v136h18v-71h18v43h18v-86h18v115h18v-57h18v-39h18v79h18v-121h18v155h18v-83h18v47h18v-96h18v132h18v-68h18v-43h18v89h18v-109h18v143h18v-77h18v43h18v-86h18v121h18v-61h18v-37h18v77h18v-95h18v125h18v-67h18v41h18v-78h18v104h18v-51h18v-34h18v69h18v-85h18v110h18v-57h18v32h18v-67h18v91h18v-43h18v-29h18v59h18v-73h18v93h18v-49h18v27h18v-58h18v77h18v-37h18v-24h18v50h18v-62h18v79h18v-41h18v22h18v-49h18v67h18v-32h18v-18h18v39h18v-51h18v66h18v-27h18v15h18v-36h18v49h18v-22h18v12h18v-29h18v42h18v-18h18v9h18v-23h18v34h18v-14h18v7h18v-18h18v27h18v-10h18v5h18v-14h18v20h18v-7h18v3h18" fill="none" stroke="url(#g)" stroke-width="2.4" filter="url(#glow)"/>
+  <rect x="0" y="59" width="1600" height="1" fill="#fff" opacity=".25"/>
+</svg>
